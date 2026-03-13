@@ -31,6 +31,12 @@ pub fn Workflow::connect(
   port : PortIndex,
   to : NodeId,
 ) -> Workflow {
+  guard self.nodes.contains(from) else {
+    abort("connect: source node \{from} does not exist in workflow")
+  }
+  guard self.nodes.contains(to) else {
+    abort("connect: target node \{to} does not exist in workflow")
+  }
   let conn = Connection::new(from, port, to)
   let connections = self.connections.copy()
   connections.push(conn)
@@ -57,6 +63,12 @@ pub fn Workflow::connect_to_input(
   to : NodeId,
   to_input : Int,
 ) -> Workflow {
+  guard self.nodes.contains(from) else {
+    abort("connect_to_input: source node \{from} does not exist in workflow")
+  }
+  guard self.nodes.contains(to) else {
+    abort("connect_to_input: target node \{to} does not exist in workflow")
+  }
   guard to_input >= 0 else {
     abort("connect_to_input: to_input must be non-negative, got \{to_input}")
   }

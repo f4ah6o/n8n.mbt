@@ -1,4 +1,4 @@
-// ── Regression tests for bugs #4-6 ──
+// ── Regression tests for bugs #4-8 ──
 
 ///|
 /// Bug #4: connect_to_input with negative to_input should abort.
@@ -104,5 +104,52 @@ test "panic regression/execute_node: Merge aborts" {
     @n8n.execute_node(@n8n.Merge(@n8n.KeepInput0), [
       @n8n.Item::of("a", Json::number(1)),
     ]),
+  )
+}
+
+///|
+/// Bug #7: connect to non-existent source node should abort.
+test "panic regression/connect: non-existent source node aborts" {
+  let wf = @n8n.Workflow::new("bad-src").add_node(
+    @n8n.NodeDef::new(@n8n.NodeId("b"), "B", @n8n.NoOp),
+  )
+  ignore(wf.connect_default(@n8n.NodeId("ghost"), @n8n.NodeId("b")))
+}
+
+///|
+/// Bug #7: connect to non-existent target node should abort.
+test "panic regression/connect: non-existent target node aborts" {
+  let wf = @n8n.Workflow::new("bad-tgt").add_node(
+    @n8n.NodeDef::new(@n8n.NodeId("a"), "A", @n8n.Start),
+  )
+  ignore(wf.connect_default(@n8n.NodeId("a"), @n8n.NodeId("ghost")))
+}
+
+///|
+/// Bug #7: connect_to_input to non-existent target should abort.
+test "panic regression/connect_to_input: non-existent target aborts" {
+  let wf = @n8n.Workflow::new("bad-tgt2").add_node(
+    @n8n.NodeDef::new(@n8n.NodeId("a"), "A", @n8n.Start),
+  )
+  ignore(
+    wf.connect_to_input(
+      @n8n.NodeId("a"),
+      @n8n.default_port,
+      @n8n.NodeId("ghost"),
+      0,
+    ),
+  )
+}
+
+///|
+/// Bug #8: Connection::with_input(-1) should abort (bypass Workflow builder).
+test "panic regression/Connection::with_input: negative to_input aborts" {
+  ignore(
+    @n8n.Connection::with_input(
+      @n8n.NodeId("a"),
+      @n8n.default_port,
+      @n8n.NodeId("b"),
+      -1,
+    ),
   )
 }

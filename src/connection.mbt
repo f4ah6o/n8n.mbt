@@ -51,5 +51,10 @@ pub fn Connection::with_input(
   to_node : NodeId,
   to_input : Int,
 ) -> Connection {
+  guard to_input >= 0 else {
+    abort(
+      "Connection::with_input: to_input must be non-negative, got \{to_input}",
+    )
+  }
   { from: { node: from_node, index: from_port }, to: to_node, to_input }
 }
