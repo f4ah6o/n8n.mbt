@@ -39,15 +39,28 @@ pub fn execute(workflow : Workflow) -> ExecutionResult raise {
     // Execute the node.
     let outputs = match node_def.kind {
       Merge(mode) => {
-        // For Merge, use grouped inputs so modes can distinguish input 0 vs 1.
+        // Validate that Merge only has input indices 0 and 1.
+        for key, _ in grouped {
+          guard key == 0 || key == 1 else {
+            fail(
+              "Merge node \{node_id} received items on input \{key}; only 0 and 1 are valid",
+            )
+          }
+        }
         let input0 = grouped.get(0).unwrap_or([])
         let input1 = grouped.get(1).unwrap_or([])
         execute_merge(mode, input0, input1)
       }
       _ => {
-        // For all other nodes, flatten grouped inputs into a single array.
+        // Flatten grouped inputs in input-index order for deterministic ordering.
+        let keys : Array[Int] = []
+        for k, _ in grouped {
+          keys.push(k)
+        }
+        keys.sort()
         let flat : Array[Item] = []
-        for _, items in grouped {
+        for k in keys {
+          let items = grouped.get(k).unwrap_or([])
           for item in items {
             flat.push(item)
           }

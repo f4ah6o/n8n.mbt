@@ -57,6 +57,9 @@ pub fn Workflow::connect_to_input(
   to : NodeId,
   to_input : Int,
 ) -> Workflow {
+  guard to_input >= 0 else {
+    abort("connect_to_input: to_input must be non-negative, got \{to_input}")
+  }
   let conn = Connection::with_input(from, port, to, to_input)
   let connections = self.connections.copy()
   connections.push(conn)

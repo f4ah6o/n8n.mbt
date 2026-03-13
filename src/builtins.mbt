@@ -102,9 +102,9 @@ pub fn execute_node(
       outputs[PortIndex(1)] = false_items
     }
     Merge(_) =>
-      // Merge execution is handled by execute_merge() in the engine.
-      // This branch should not be reached; if called directly, append all inputs.
-      outputs[default_port] = inputs
+      abort(
+        "execute_node() does not support Merge; use execute_merge() instead",
+      )
     Code(func) => outputs[default_port] = func(inputs)
     NoOp => outputs[default_port] = inputs
     Switch(rules, fallback~) => {
