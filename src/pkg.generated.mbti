@@ -1,0 +1,163 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "n8n"
+
+// Values
+pub let default_port : PortIndex
+
+pub fn execute(Workflow) -> ExecutionResult raise
+
+pub fn execute_node(NodeKind, Array[Item]) -> Map[PortIndex, Array[Item]]
+
+// Errors
+
+// Types and methods
+pub(all) enum CompareOp {
+  Equal
+  NotEqual
+  GreaterThan
+  LessThan
+  GreaterEqual
+  LessEqual
+  Contains
+  NotContains
+  Exists
+  NotExists
+}
+pub impl Eq for CompareOp
+pub impl Show for CompareOp
+pub impl ToJson for CompareOp
+
+pub(all) struct Condition {
+  field : String
+  op : CompareOp
+  value : Json
+}
+pub impl Eq for Condition
+pub impl Show for Condition
+pub impl ToJson for Condition
+
+pub(all) struct Connection {
+  from : Port
+  to : NodeId
+}
+pub fn Connection::new(NodeId, PortIndex, NodeId) -> Self
+pub impl Eq for Connection
+pub impl Show for Connection
+pub impl ToJson for Connection
+
+pub(all) struct ExecutionResult {
+  node_results : Array[NodeResult]
+  final_outputs : Map[NodeId, Array[Item]]
+}
+pub impl Show for ExecutionResult
+
+pub(all) struct FieldAssignment {
+  key : String
+  value : Json
+}
+pub impl Eq for FieldAssignment
+pub impl Show for FieldAssignment
+pub impl ToJson for FieldAssignment
+
+pub(all) struct Item {
+  json : Map[String, Json]
+}
+pub fn Item::empty() -> Self
+pub fn Item::from_pairs(Array[(String, Json)]) -> Self
+pub fn Item::get(Self, String) -> Json?
+pub fn Item::merge(Self, Self) -> Self
+pub fn Item::of(String, Json) -> Self
+pub fn Item::set(Self, String, Json) -> Self
+pub impl Eq for Item
+pub impl Show for Item
+pub impl ToJson for Item
+
+pub(all) enum MergeMode {
+  Append
+  MergeByPosition
+  KeepInput0
+  KeepInput1
+}
+pub impl Eq for MergeMode
+pub impl Show for MergeMode
+pub impl ToJson for MergeMode
+
+pub(all) struct NodeDef {
+  id : NodeId
+  name : String
+  kind : NodeKind
+}
+pub fn NodeDef::new(NodeId, String, NodeKind) -> Self
+pub impl Show for NodeDef
+
+pub(all) struct NodeId(String)
+#deprecated
+pub fn NodeId::inner(Self) -> String
+pub impl Eq for NodeId
+pub impl Hash for NodeId
+pub impl Show for NodeId
+pub impl ToJson for NodeId
+
+pub(all) enum NodeKind {
+  Start
+  Set(Array[FieldAssignment])
+  If(Condition)
+  Merge(MergeMode)
+  Code((Array[Item]) -> Array[Item])
+  NoOp
+  Switch(Array[SwitchRule], fallback~ : PortIndex)
+}
+pub fn NodeKind::output_count(Self) -> Int
+pub impl Show for NodeKind
+
+pub(all) struct NodeResult {
+  node_id : NodeId
+  outputs : Map[PortIndex, Array[Item]]
+}
+pub impl Show for NodeResult
+
+pub(all) struct Port {
+  node : NodeId
+  index : PortIndex
+}
+pub fn Port::new(NodeId, PortIndex) -> Self
+pub impl Eq for Port
+pub impl Hash for Port
+pub impl Show for Port
+pub impl ToJson for Port
+
+pub(all) struct PortIndex(Int)
+#deprecated
+pub fn PortIndex::inner(Self) -> Int
+pub impl Eq for PortIndex
+pub impl Hash for PortIndex
+pub impl Show for PortIndex
+pub impl ToJson for PortIndex
+
+pub(all) struct SwitchRule {
+  condition : Condition
+  output : PortIndex
+}
+pub impl Eq for SwitchRule
+pub impl Show for SwitchRule
+pub impl ToJson for SwitchRule
+
+pub(all) struct Workflow {
+  name : String
+  nodes : Map[NodeId, NodeDef]
+  connections : Array[Connection]
+}
+pub fn Workflow::add_node(Self, NodeDef) -> Self
+pub fn Workflow::connect(Self, NodeId, PortIndex, NodeId) -> Self
+pub fn Workflow::connect_default(Self, NodeId, NodeId) -> Self
+pub fn Workflow::incoming(Self, NodeId) -> Array[Connection]
+pub fn Workflow::new(String) -> Self
+pub fn Workflow::outgoing(Self, NodeId, PortIndex) -> Array[Connection]
+pub fn Workflow::start_nodes(Self) -> Array[NodeId]
+pub fn Workflow::topo_sort(Self) -> Array[NodeId] raise
+pub impl Show for Workflow
+
+// Type aliases
+
+// Traits
+
