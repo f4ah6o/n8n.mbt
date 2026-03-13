@@ -6,6 +6,8 @@ pub let default_port : PortIndex
 
 pub fn execute(Workflow) -> ExecutionResult raise
 
+pub fn execute_merge(MergeMode, Array[Item], Array[Item]) -> Map[PortIndex, Array[Item]]
+
 pub fn execute_node(NodeKind, Array[Item]) -> Map[PortIndex, Array[Item]]
 
 // Errors
@@ -39,8 +41,10 @@ pub impl ToJson for Condition
 pub(all) struct Connection {
   from : Port
   to : NodeId
+  to_input : Int
 }
 pub fn Connection::new(NodeId, PortIndex, NodeId) -> Self
+pub fn Connection::with_input(NodeId, PortIndex, NodeId, Int) -> Self
 pub impl Eq for Connection
 pub impl Show for Connection
 pub impl ToJson for Connection
@@ -150,6 +154,7 @@ pub(all) struct Workflow {
 pub fn Workflow::add_node(Self, NodeDef) -> Self
 pub fn Workflow::connect(Self, NodeId, PortIndex, NodeId) -> Self
 pub fn Workflow::connect_default(Self, NodeId, NodeId) -> Self
+pub fn Workflow::connect_to_input(Self, NodeId, PortIndex, NodeId, Int) -> Self
 pub fn Workflow::incoming(Self, NodeId) -> Array[Connection]
 pub fn Workflow::new(String) -> Self
 pub fn Workflow::outgoing(Self, NodeId, PortIndex) -> Array[Connection]

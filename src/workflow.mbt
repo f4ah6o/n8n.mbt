@@ -60,7 +60,7 @@ pub fn Workflow::connect_to_input(
   let conn = Connection::with_input(from, port, to, to_input)
   let connections = self.connections.copy()
   connections.push(conn)
-  { ..self, connections }
+  { ..self, connections, }
 }
 
 ///|

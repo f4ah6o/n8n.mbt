@@ -125,7 +125,7 @@ test "Code node transforms items" {
 }
 
 ///|
-test "Merge node combines items from two branches" {
+test "Merge Append combines items from two branches" {
   let wf = @n8n.Workflow::new("merge")
     .add_node(@n8n.NodeDef::new(@n8n.NodeId("s1"), "Start1", @n8n.Start))
     .add_node(@n8n.NodeDef::new(@n8n.NodeId("s2"), "Start2", @n8n.Start))
@@ -148,12 +148,23 @@ test "Merge node combines items from two branches" {
     )
     .connect_default(@n8n.NodeId("s1"), @n8n.NodeId("set_a"))
     .connect_default(@n8n.NodeId("s2"), @n8n.NodeId("set_b"))
-    .connect_default(@n8n.NodeId("set_a"), @n8n.NodeId("merge"))
-    .connect_default(@n8n.NodeId("set_b"), @n8n.NodeId("merge"))
+    .connect_to_input(
+      @n8n.NodeId("set_a"),
+      @n8n.default_port,
+      @n8n.NodeId("merge"),
+      0,
+    )
+    .connect_to_input(
+      @n8n.NodeId("set_b"),
+      @n8n.default_port,
+      @n8n.NodeId("merge"),
+      1,
+    )
   let result = @n8n.execute(wf)
   guard result.final_outputs.get(@n8n.NodeId("merge")) is Some(items) else {
     fail("expected output from merge node")
   }
+  // Append: both items present
   inspect(items.length(), content="2")
 }
 
@@ -306,4 +317,174 @@ test "condition: Exists / NotExists" {
   // First item has "a" → true (port 0), second doesn't → false (port 1)
   inspect(outputs.get(@n8n.PortIndex(0)).unwrap_or([]).length(), content="1")
   inspect(outputs.get(@n8n.PortIndex(1)).unwrap_or([]).length(), content="1")
+}
+
+// ── MergeMode tests ──
+
+///|
+/// Helper: build a two-branch merge workflow with the given mode.
+fn make_merge_workflow(mode : @n8n.MergeMode) -> @n8n.Workflow {
+  @n8n.Workflow::new("merge-test")
+  .add_node(@n8n.NodeDef::new(@n8n.NodeId("s1"), "Start1", @n8n.Start))
+  .add_node(@n8n.NodeDef::new(@n8n.NodeId("s2"), "Start2", @n8n.Start))
+  .add_node(
+    @n8n.NodeDef::new(
+      @n8n.NodeId("set0"),
+      "Set0",
+      @n8n.Set([{ key: "src", value: Json::string("input0") }]),
+    ),
+  )
+  .add_node(
+    @n8n.NodeDef::new(
+      @n8n.NodeId("set1"),
+      "Set1",
+      @n8n.Set([{ key: "src", value: Json::string("input1") }]),
+    ),
+  )
+  .add_node(@n8n.NodeDef::new(@n8n.NodeId("merge"), "Merge", @n8n.Merge(mode)))
+  .connect_default(@n8n.NodeId("s1"), @n8n.NodeId("set0"))
+  .connect_default(@n8n.NodeId("s2"), @n8n.NodeId("set1"))
+  .connect_to_input(
+    @n8n.NodeId("set0"),
+    @n8n.default_port,
+    @n8n.NodeId("merge"),
+    0,
+  )
+  .connect_to_input(
+    @n8n.NodeId("set1"),
+    @n8n.default_port,
+    @n8n.NodeId("merge"),
+    1,
+  )
+}
+
+///|
+test "Merge KeepInput0 keeps only input 0 items" {
+  let wf = make_merge_workflow(@n8n.KeepInput0)
+  let result = @n8n.execute(wf)
+  guard result.final_outputs.get(@n8n.NodeId("merge")) is Some(items) else {
+    fail("expected output from merge node")
+  }
+  inspect(items.length(), content="1")
+  inspect(
+    items[0].get("src"),
+    content=(
+      #|Some(String("input0"))
+    ),
+  )
+}
+
+///|
+test "Merge KeepInput1 keeps only input 1 items" {
+  let wf = make_merge_workflow(@n8n.KeepInput1)
+  let result = @n8n.execute(wf)
+  guard result.final_outputs.get(@n8n.NodeId("merge")) is Some(items) else {
+    fail("expected output from merge node")
+  }
+  inspect(items.length(), content="1")
+  inspect(
+    items[0].get("src"),
+    content=(
+      #|Some(String("input1"))
+    ),
+  )
+}
+
+///|
+test "Merge MergeByPosition zips items by index" {
+  // Build a workflow where each branch produces one item, then merge by position.
+  let wf = make_merge_workflow(@n8n.MergeByPosition)
+  let result = @n8n.execute(wf)
+  guard result.final_outputs.get(@n8n.NodeId("merge")) is Some(items) else {
+    fail("expected output from merge node")
+  }
+  // 1 item from each input at position 0 → merged into 1 item
+  inspect(items.length(), content="1")
+  // Merged item has fields from both (input1 overrides "src" from input0)
+  inspect(
+    items[0].get("src"),
+    content=(
+      #|Some(String("input1"))
+    ),
+  )
+}
+
+///|
+test "Merge Append includes all items from both inputs" {
+  let wf = make_merge_workflow(@n8n.Append)
+  let result = @n8n.execute(wf)
+  guard result.final_outputs.get(@n8n.NodeId("merge")) is Some(items) else {
+    fail("expected output from merge node")
+  }
+  inspect(items.length(), content="2")
+}
+
+// ── Non-numeric comparison tests ──
+
+///|
+test "GreaterEqual on non-numeric returns false" {
+  // String vs String should not satisfy GreaterEqual (incomparable via json_compare)
+  let items = [@n8n.Item::of("name", Json::string("alice"))]
+  let outputs = @n8n.execute_node(
+    @n8n.If({ field: "name", op: @n8n.GreaterEqual, value: Json::string("bob") }),
+    items,
+  )
+  // false branch (port 1) should get the item
+  inspect(outputs.get(@n8n.PortIndex(0)).unwrap_or([]).length(), content="0")
+  inspect(outputs.get(@n8n.PortIndex(1)).unwrap_or([]).length(), content="1")
+}
+
+///|
+test "LessEqual on type-mismatched values returns false" {
+  // Number vs String should be incomparable
+  let items = [@n8n.Item::of("x", Json::number(42))]
+  let outputs = @n8n.execute_node(
+    @n8n.If({ field: "x", op: @n8n.LessEqual, value: Json::string("hello") }),
+    items,
+  )
+  inspect(outputs.get(@n8n.PortIndex(0)).unwrap_or([]).length(), content="0")
+  inspect(outputs.get(@n8n.PortIndex(1)).unwrap_or([]).length(), content="1")
+}
+
+///|
+test "GreaterThan on booleans returns false" {
+  let items = [@n8n.Item::of("flag", Json::boolean(true))]
+  let outputs = @n8n.execute_node(
+    @n8n.If({ field: "flag", op: @n8n.GreaterThan, value: Json::boolean(false) }),
+    items,
+  )
+  inspect(outputs.get(@n8n.PortIndex(0)).unwrap_or([]).length(), content="0")
+  inspect(outputs.get(@n8n.PortIndex(1)).unwrap_or([]).length(), content="1")
+}
+
+// ── Switch::output_count with fallback ──
+
+///|
+test "Switch output_count includes fallback port" {
+  // Rules only use port 0, but fallback is port 5 → output_count should be 6
+  let kind = @n8n.Switch(
+    [
+      {
+        condition: { field: "x", op: @n8n.Equal, value: Json::number(1) },
+        output: @n8n.PortIndex(0),
+      },
+    ],
+    fallback=@n8n.PortIndex(5),
+  )
+  inspect(kind.output_count(), content="6")
+}
+
+///|
+test "Switch output_count when rules exceed fallback" {
+  // Rule uses port 3, fallback is port 1 → output_count should be 4
+  let kind = @n8n.Switch(
+    [
+      {
+        condition: { field: "x", op: @n8n.Equal, value: Json::number(1) },
+        output: @n8n.PortIndex(3),
+      },
+    ],
+    fallback=@n8n.PortIndex(1),
+  )
+  inspect(kind.output_count(), content="4")
 }
