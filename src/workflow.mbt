@@ -15,6 +15,9 @@ pub fn Workflow::new(name : String) -> Workflow {
 ///|
 /// Add a node to the workflow.
 pub fn Workflow::add_node(self : Workflow, node : NodeDef) -> Workflow {
+  guard not(self.nodes.contains(node.id)) else {
+    abort("add_node: node \{node.id} already exists in workflow")
+  }
   let nodes : Map[NodeId, NodeDef] = {}
   for k, v in self.nodes {
     nodes[k] = v
@@ -31,11 +34,21 @@ pub fn Workflow::connect(
   port : PortIndex,
   to : NodeId,
 ) -> Workflow {
-  guard self.nodes.contains(from) else {
+  guard self.nodes.get(from) is Some(from_def) else {
     abort("connect: source node \{from} does not exist in workflow")
   }
-  guard self.nodes.contains(to) else {
+  guard self.nodes.get(to) is Some(to_def) else {
     abort("connect: target node \{to} does not exist in workflow")
+  }
+  let PortIndex(port_idx) = port
+  let max_ports = from_def.kind.output_count()
+  guard port_idx >= 0 && port_idx < max_ports else {
+    abort(
+      "connect: port \{port} is out of range for node \{from} (output_count=\{max_ports})",
+    )
+  }
+  guard not(to_def.kind is Start) else {
+    abort("connect: cannot connect to Start node \{to} (Start ignores input)")
   }
   let conn = Connection::new(from, port, to)
   let connections = self.connections.copy()
@@ -63,11 +76,23 @@ pub fn Workflow::connect_to_input(
   to : NodeId,
   to_input : Int,
 ) -> Workflow {
-  guard self.nodes.contains(from) else {
+  guard self.nodes.get(from) is Some(from_def) else {
     abort("connect_to_input: source node \{from} does not exist in workflow")
   }
-  guard self.nodes.contains(to) else {
+  guard self.nodes.get(to) is Some(to_def) else {
     abort("connect_to_input: target node \{to} does not exist in workflow")
+  }
+  let PortIndex(port_idx) = port
+  let max_ports = from_def.kind.output_count()
+  guard port_idx >= 0 && port_idx < max_ports else {
+    abort(
+      "connect_to_input: port \{port} is out of range for node \{from} (output_count=\{max_ports})",
+    )
+  }
+  guard not(to_def.kind is Start) else {
+    abort(
+      "connect_to_input: cannot connect to Start node \{to} (Start ignores input)",
+    )
   }
   guard to_input >= 0 else {
     abort("connect_to_input: to_input must be non-negative, got \{to_input}")

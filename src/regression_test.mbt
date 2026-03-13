@@ -153,3 +153,70 @@ test "panic regression/Connection::with_input: negative to_input aborts" {
     ),
   )
 }
+
+///|
+/// Bug #9: connect with out-of-range output port should abort.
+test "panic regression/connect: invalid output port aborts" {
+  let wf = @n8n.Workflow::new("bad-port")
+    .add_node(@n8n.NodeDef::new(@n8n.NodeId("a"), "A", @n8n.Start))
+    .add_node(@n8n.NodeDef::new(@n8n.NodeId("b"), "B", @n8n.NoOp))
+  // Start has output_count=1, so PortIndex(1) is out of range
+  ignore(wf.connect(@n8n.NodeId("a"), @n8n.PortIndex(1), @n8n.NodeId("b")))
+}
+
+///|
+/// Bug #9: connect_to_input with out-of-range output port should abort.
+test "panic regression/connect_to_input: invalid output port aborts" {
+  let wf = @n8n.Workflow::new("bad-port2")
+    .add_node(
+      @n8n.NodeDef::new(
+        @n8n.NodeId("if"),
+        "If",
+        @n8n.If({ field: "x", op: @n8n.Exists, value: Json::null() }),
+      ),
+    )
+    .add_node(@n8n.NodeDef::new(@n8n.NodeId("b"), "B", @n8n.NoOp))
+  // If has output_count=2, so PortIndex(2) is out of range
+  ignore(
+    wf.connect_to_input(
+      @n8n.NodeId("if"),
+      @n8n.PortIndex(2),
+      @n8n.NodeId("b"),
+      0,
+    ),
+  )
+}
+
+///|
+/// Bug #10: connecting to a Start node should abort.
+test "panic regression/connect: target Start node aborts" {
+  let wf = @n8n.Workflow::new("bad-start")
+    .add_node(@n8n.NodeDef::new(@n8n.NodeId("a"), "A", @n8n.NoOp))
+    .add_node(@n8n.NodeDef::new(@n8n.NodeId("s"), "S", @n8n.Start))
+  ignore(wf.connect_default(@n8n.NodeId("a"), @n8n.NodeId("s")))
+}
+
+///|
+/// Bug #10: connect_to_input to a Start node should abort.
+test "panic regression/connect_to_input: target Start node aborts" {
+  let wf = @n8n.Workflow::new("bad-start2")
+    .add_node(@n8n.NodeDef::new(@n8n.NodeId("a"), "A", @n8n.NoOp))
+    .add_node(@n8n.NodeDef::new(@n8n.NodeId("s"), "S", @n8n.Start))
+  ignore(
+    wf.connect_to_input(
+      @n8n.NodeId("a"),
+      @n8n.default_port,
+      @n8n.NodeId("s"),
+      0,
+    ),
+  )
+}
+
+///|
+/// Bug #11: adding a duplicate NodeId should abort.
+test "panic regression/add_node: duplicate NodeId aborts" {
+  let wf = @n8n.Workflow::new("dup-id").add_node(
+    @n8n.NodeDef::new(@n8n.NodeId("a"), "A", @n8n.NoOp),
+  )
+  ignore(wf.add_node(@n8n.NodeDef::new(@n8n.NodeId("a"), "B", @n8n.Start)))
+}
