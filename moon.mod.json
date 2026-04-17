@@ -2,7 +2,7 @@
   "name": "n8n",
   "version": "0.1.0",
   "deps": {
-    "moonbitlang/quickcheck": "0.11.1"
+    "moonbitlang/quickcheck": "0.11.3"
   },
   "license": "Apache-2.0",
   "description": "n8n workflow engine ported to MoonBit",
