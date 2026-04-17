@@ -8,7 +8,7 @@ pub fn execute(Workflow) -> ExecutionResult raise
 
 pub fn execute_merge(MergeMode, Array[Item], Array[Item]) -> Map[PortIndex, Array[Item]]
 
-pub fn execute_node(NodeKind, Array[Item]) -> Map[PortIndex, Array[Item]]
+pub fn execute_node(NodeKind, Array[Item]) -> Map[PortIndex, Array[Item]] raise
 
 // Errors
 
@@ -52,8 +52,22 @@ pub impl ToJson for Connection
 pub(all) struct ExecutionResult {
   node_results : Array[NodeResult]
   final_outputs : Map[NodeId, Array[Item]]
+  status : ExecutionStatus
+  errors : Array[NodeError]
 }
 pub impl Show for ExecutionResult
+
+pub(all) enum ExecutionStatus {
+  New
+  Running
+  Success
+  Error
+  Skipped
+  Canceled
+}
+pub impl Eq for ExecutionStatus
+pub impl Show for ExecutionStatus
+pub impl ToJson for ExecutionStatus
 
 pub(all) struct FieldAssignment {
   key : String
@@ -90,9 +104,20 @@ pub(all) struct NodeDef {
   id : NodeId
   name : String
   kind : NodeKind
+  disabled : Bool
+  on_error : OnError
 }
 pub fn NodeDef::new(NodeId, String, NodeKind) -> Self
+pub fn NodeDef::with_options(NodeId, String, NodeKind, disabled? : Bool, on_error? : OnError) -> Self
 pub impl Show for NodeDef
+
+pub(all) struct NodeError {
+  message : String
+  node_id : NodeId
+}
+pub impl Eq for NodeError
+pub impl Show for NodeError
+pub impl ToJson for NodeError
 
 pub(all) struct NodeId(String)
 #deprecated
@@ -107,9 +132,13 @@ pub(all) enum NodeKind {
   Set(Array[FieldAssignment])
   If(Condition)
   Merge(MergeMode)
-  Code((Array[Item]) -> Array[Item])
+  Code((Array[Item]) -> Array[Item] raise)
   NoOp
   Switch(Array[SwitchRule], fallback~ : PortIndex)
+  Filter(Condition)
+  Limit(Int)
+  RemoveFields(Array[String])
+  RenameFields(Array[(String, String)])
 }
 pub fn NodeKind::output_count(Self) -> Int
 pub impl Show for NodeKind
@@ -117,8 +146,19 @@ pub impl Show for NodeKind
 pub(all) struct NodeResult {
   node_id : NodeId
   outputs : Map[PortIndex, Array[Item]]
+  status : ExecutionStatus
+  error : NodeError?
 }
 pub impl Show for NodeResult
+
+pub(all) enum OnError {
+  StopWorkflow
+  ContinueRegularOutput
+  ContinueErrorOutput
+}
+pub impl Eq for OnError
+pub impl Show for OnError
+pub impl ToJson for OnError
 
 pub(all) struct Port {
   node : NodeId

@@ -172,7 +172,7 @@ test "pbt/item: of creates single-field item" {
 /// NoOp is identity: items pass through unchanged.
 test "pbt/noop: identity" {
   let prop = @qc.forall(gen_items(), fn(items) {
-    let outputs = @n8n.execute_node(@n8n.NoOp, items)
+    let outputs = try! @n8n.execute_node(@n8n.NoOp, items)
     outputs.get(@n8n.default_port).unwrap_or([]) == items
   })
   @qc.quick_check(prop, max_success=200)
@@ -182,10 +182,10 @@ test "pbt/noop: identity" {
 /// NoOp is idempotent: applying twice yields same result.
 test "pbt/noop: idempotent" {
   let prop = @qc.forall(gen_items(), fn(items) {
-    let out1 = @n8n.execute_node(@n8n.NoOp, items)
+    let out1 = try! @n8n.execute_node(@n8n.NoOp, items)
       .get(@n8n.default_port)
       .unwrap_or([])
-    let out2 = @n8n.execute_node(@n8n.NoOp, out1)
+    let out2 = try! @n8n.execute_node(@n8n.NoOp, out1)
       .get(@n8n.default_port)
       .unwrap_or([])
     out1 == out2
@@ -210,7 +210,7 @@ test "pbt/if: partition preserves count" {
       _ => Exists
     }
     let cond = @n8n.Condition::{ field, op, value: Json::number(0.0) }
-    let outputs = @n8n.execute_node(@n8n.If(cond), items)
+    let outputs = try! @n8n.execute_node(@n8n.If(cond), items)
     let true_items = outputs.get(@n8n.PortIndex(0)).unwrap_or([])
     let false_items = outputs.get(@n8n.PortIndex(1)).unwrap_or([])
     true_items.length() + false_items.length() == items.length()
@@ -224,7 +224,7 @@ test "pbt/if: partition preserves count" {
 test "pbt/if: multiset partition integrity" {
   let prop = @qc.forall(gen_items(), fn(items) {
     let cond = @n8n.Condition::{ field: "x", op: Exists, value: Json::null() }
-    let outputs = @n8n.execute_node(@n8n.If(cond), items)
+    let outputs = try! @n8n.execute_node(@n8n.If(cond), items)
     let t = outputs.get(@n8n.PortIndex(0)).unwrap_or([])
     let f = outputs.get(@n8n.PortIndex(1)).unwrap_or([])
     let combined : Array[@n8n.Item] = []
@@ -245,7 +245,7 @@ test "pbt/if: multiset partition integrity" {
 test "pbt/if: correct branch placement for Exists" {
   let prop = @qc.forall(gen_items(), fn(items) {
     let cond = @n8n.Condition::{ field: "x", op: Exists, value: Json::null() }
-    let outputs = @n8n.execute_node(@n8n.If(cond), items)
+    let outputs = try! @n8n.execute_node(@n8n.If(cond), items)
     let t = outputs.get(@n8n.PortIndex(0)).unwrap_or([])
     let f = outputs.get(@n8n.PortIndex(1)).unwrap_or([])
     let all_true_have_x = t.iter().all(fn(item) { not(item.get("x") is None) })
@@ -264,7 +264,7 @@ test "pbt/set: preserves item count" {
   let prop = @qc.forall(gen, fn(p) {
     let (items, (key, val)) = p
     let assignments = [@n8n.FieldAssignment::{ key, value: val }]
-    let outputs = @n8n.execute_node(@n8n.Set(assignments), items)
+    let outputs = try! @n8n.execute_node(@n8n.Set(assignments), items)
     let result = outputs.get(@n8n.default_port).unwrap_or([])
     result.length() == items.length()
   })
@@ -278,7 +278,7 @@ test "pbt/set: all outputs contain assigned field" {
   let prop = @qc.forall(gen, fn(p) {
     let (items, (key, val)) = p
     let assignments = [@n8n.FieldAssignment::{ key, value: val }]
-    let outputs = @n8n.execute_node(@n8n.Set(assignments), items)
+    let outputs = try! @n8n.execute_node(@n8n.Set(assignments), items)
     let result = outputs.get(@n8n.default_port).unwrap_or([])
     result.iter().all(fn(item) { item.get(key) == Some(val) })
   })
@@ -371,7 +371,7 @@ test "pbt/switch: multiset partition integrity" {
       },
     ]
     let kind = @n8n.Switch(rules, fallback=@n8n.PortIndex(2))
-    let outputs = @n8n.execute_node(kind, items)
+    let outputs = try! @n8n.execute_node(kind, items)
     let combined : Array[@n8n.Item] = []
     for _, arr in outputs {
       for item in arr {
@@ -395,7 +395,9 @@ test "pbt/json_compare: reflexivity (all comparison ops)" {
   let prop = @qc.forall(gen, fn(x) {
     let item = @n8n.Item::of("v", x)
     let check = fn(op : @n8n.CompareOp) -> Bool {
-      let out = @n8n.execute_node(@n8n.If({ field: "v", op, value: x }), [item])
+      let out = try! @n8n.execute_node(@n8n.If({ field: "v", op, value: x }), [
+        item,
+      ])
       out.get(@n8n.PortIndex(0)).unwrap_or([]).length() == 1
     }
     // x == x, x >= x, x <= x must be true
@@ -421,13 +423,13 @@ test "pbt/json_compare: antisymmetry (a > b implies !(b > a))" {
     let item_a = @n8n.Item::of("v", ja)
     let item_b = @n8n.Item::of("v", jb)
     // Check: a > b?
-    let a_gt_out = @n8n.execute_node(
+    let a_gt_out = try! @n8n.execute_node(
       @n8n.If({ field: "v", op: GreaterThan, value: jb }),
       [item_a],
     )
     let a_gt_b = a_gt_out.get(@n8n.PortIndex(0)).unwrap_or([]).length() == 1
     // Check: b > a?
-    let b_gt_out = @n8n.execute_node(
+    let b_gt_out = try! @n8n.execute_node(
       @n8n.If({ field: "v", op: GreaterThan, value: ja }),
       [item_b],
     )
@@ -452,7 +454,9 @@ test "pbt/json_compare: trichotomy for numbers" {
     let jb = Json::number(b.to_double())
     let item = @n8n.Item::of("v", ja)
     let test_op = fn(op : @n8n.CompareOp) -> Bool {
-      let out = @n8n.execute_node(@n8n.If({ field: "v", op, value: jb }), [item])
+      let out = try! @n8n.execute_node(@n8n.If({ field: "v", op, value: jb }), [
+        item,
+      ])
       out.get(@n8n.PortIndex(0)).unwrap_or([]).length() == 1
     }
     let lt = test_op(LessThan)
@@ -478,7 +482,9 @@ test "pbt/json_compare: non-numeric comparison is false" {
     let item = @n8n.Item::of("v", ja)
     // All ordering ops should route to false branch for strings
     let test_op = fn(op : @n8n.CompareOp) -> Bool {
-      let out = @n8n.execute_node(@n8n.If({ field: "v", op, value: jb }), [item])
+      let out = try! @n8n.execute_node(@n8n.If({ field: "v", op, value: jb }), [
+        item,
+      ])
       out.get(@n8n.PortIndex(0)).unwrap_or([]).length() == 0
     }
     test_op(GreaterThan) &&

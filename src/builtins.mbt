@@ -73,7 +73,7 @@ fn json_compare(a : Json, b : Json) -> Int? {
 pub fn execute_node(
   kind : NodeKind,
   inputs : Array[Item],
-) -> Map[PortIndex, Array[Item]] {
+) -> Map[PortIndex, Array[Item]] raise {
   let outputs : Map[PortIndex, Array[Item]] = {}
   match kind {
     Start => outputs[default_port] = [Item::empty()]
@@ -107,6 +107,61 @@ pub fn execute_node(
       )
     Code(func) => outputs[default_port] = func(inputs)
     NoOp => outputs[default_port] = inputs
+    Filter(condition) => {
+      let result : Array[Item] = []
+      for item in inputs {
+        if evaluate_condition(condition, item) {
+          result.push(item)
+        }
+      }
+      outputs[default_port] = result
+    }
+    Limit(n) => {
+      let result : Array[Item] = []
+      let limit = if n < inputs.length() { n } else { inputs.length() }
+      for i in 0..<limit {
+        result.push(inputs[i])
+      }
+      outputs[default_port] = result
+    }
+    RemoveFields(fields) => {
+      let result : Array[Item] = []
+      for item in inputs {
+        let json : Map[String, Json] = {}
+        for k, v in item.json {
+          let mut should_remove = false
+          for f in fields {
+            if k == f {
+              should_remove = true
+              break
+            }
+          }
+          if not(should_remove) {
+            json[k] = v
+          }
+        }
+        result.push({ json, })
+      }
+      outputs[default_port] = result
+    }
+    RenameFields(pairs) => {
+      let result : Array[Item] = []
+      for item in inputs {
+        let json : Map[String, Json] = {}
+        for k, v in item.json {
+          let mut new_key = k
+          for pair in pairs {
+            if k == pair.0 {
+              new_key = pair.1
+              break
+            }
+          }
+          json[new_key] = v
+        }
+        result.push({ json, })
+      }
+      outputs[default_port] = result
+    }
     Switch(rules, fallback~) => {
       // Initialize output arrays
       let max_port = kind.output_count()

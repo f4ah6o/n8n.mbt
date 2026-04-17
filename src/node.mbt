@@ -61,13 +61,32 @@ pub(all) enum NodeKind {
   If(Condition)
   /// Combines items from two inputs.
   Merge(MergeMode)
-  /// Applies a user-provided function to the items.
-  Code((Array[Item]) -> Array[Item])
+  /// Applies a user-provided function to the items. May raise errors.
+  Code((Array[Item]) -> Array[Item] raise)
   /// Pass-through: forwards items unchanged.
   NoOp
   /// Multi-way conditional routing.
   Switch(Array[SwitchRule], fallback~ : PortIndex)
+  /// Filters items: matching items pass through, non-matching are dropped.
+  Filter(Condition)
+  /// Keeps only the first N items.
+  Limit(Int)
+  /// Removes the specified fields from each item.
+  RemoveFields(Array[String])
+  /// Renames fields: Array of (old_name, new_name) pairs.
+  RenameFields(Array[(String, String)])
 }
+
+///|
+/// How to handle errors during node execution. Maps to n8n's onError.
+pub(all) enum OnError {
+  /// Stop the workflow on error (default).
+  StopWorkflow
+  /// Continue execution, passing input items through on the regular output.
+  ContinueRegularOutput
+  /// Continue execution, routing error info to a separate error output.
+  ContinueErrorOutput
+} derive(Show, ToJson, Eq)
 
 ///|
 /// A node definition within a workflow.
@@ -75,18 +94,42 @@ pub(all) struct NodeDef {
   id : NodeId
   name : String
   kind : NodeKind
+  /// Whether this node is disabled (skipped during execution).
+  disabled : Bool
+  /// Error handling strategy.
+  on_error : OnError
 } derive(Show)
 
 ///|
 pub fn NodeDef::new(id : NodeId, name : String, kind : NodeKind) -> NodeDef {
-  { id, name, kind }
+  { id, name, kind, disabled: false, on_error: StopWorkflow }
+}
+
+///|
+/// Create a node with custom options.
+pub fn NodeDef::with_options(
+  id : NodeId,
+  name : String,
+  kind : NodeKind,
+  disabled? : Bool = false,
+  on_error? : OnError = StopWorkflow,
+) -> NodeDef {
+  { id, name, kind, disabled, on_error }
 }
 
 ///|
 /// Returns how many output ports this node kind has.
 pub fn NodeKind::output_count(self : NodeKind) -> Int {
   match self {
-    Start | Set(_) | Merge(_) | Code(_) | NoOp => 1
+    Start
+    | Set(_)
+    | Merge(_)
+    | Code(_)
+    | NoOp
+    | Filter(_)
+    | Limit(_)
+    | RemoveFields(_)
+    | RenameFields(_) => 1
     If(_) => 2
     Switch(rules, fallback~) => {
       let PortIndex(fb_idx) = fallback

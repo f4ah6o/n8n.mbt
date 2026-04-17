@@ -27,5 +27,25 @@ pub impl Show for NodeKind with output(self, logger) {
       fallback.output(logger)
       logger.write_string(")")
     }
+    Filter(cond) => {
+      logger.write_string("Filter(")
+      cond.output(logger)
+      logger.write_string(")")
+    }
+    Limit(n) => {
+      logger.write_string("Limit(")
+      n.output(logger)
+      logger.write_string(")")
+    }
+    RemoveFields(fields) => {
+      logger.write_string("RemoveFields(")
+      fields.output(logger)
+      logger.write_string(")")
+    }
+    RenameFields(pairs) => {
+      logger.write_string("RenameFields(")
+      pairs.output(logger)
+      logger.write_string(")")
+    }
   }
 }

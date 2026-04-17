@@ -42,7 +42,9 @@ pub fn Workflow::connect(
   }
   let PortIndex(port_idx) = port
   let max_ports = from_def.kind.output_count()
-  guard port_idx >= 0 && port_idx < max_ports else {
+  let has_error_port = from_def.on_error is ContinueErrorOutput
+  let limit = if has_error_port { max_ports + 1 } else { max_ports }
+  guard port_idx >= 0 && port_idx < limit else {
     abort(
       "connect: port \{port} is out of range for node \{from} (output_count=\{max_ports})",
     )
@@ -84,7 +86,9 @@ pub fn Workflow::connect_to_input(
   }
   let PortIndex(port_idx) = port
   let max_ports = from_def.kind.output_count()
-  guard port_idx >= 0 && port_idx < max_ports else {
+  let has_error_port = from_def.on_error is ContinueErrorOutput
+  let limit = if has_error_port { max_ports + 1 } else { max_ports }
+  guard port_idx >= 0 && port_idx < limit else {
     abort(
       "connect_to_input: port \{port} is out of range for node \{from} (output_count=\{max_ports})",
     )
