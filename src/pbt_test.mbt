@@ -5,14 +5,14 @@
 
 ///|
 /// Generate a random Json value (number, string, bool, or null).
-fn gen_json() -> @qc.Gen[Json] {
-  @qc.frequency([
-    (4, @qc.int_range(-1000, 1000).fmap(fn(n) { Json::number(n.to_double()) })),
+fn gen_json() -> @gen.Gen[Json] {
+  @gen.frequency([
+    (4, @gen.int_range(-1000, 1000).fmap(fn(n) { Json::number(n.to_double()) })),
     (
       3,
-      @qc.sized(fn(size) {
-        @qc.int_range(1, if size > 0 { size } else { 3 }).bind(fn(len) {
-          @qc.alphabet()
+      @gen.sized(fn(size) {
+        @gen.int_range(1, if size > 0 { size } else { 3 }).bind(fn(len) {
+          @gen.char_range('a', 'z')
           .array_with_size(len)
           .fmap(fn(chars) {
             let sb = StringBuilder::new()
@@ -26,19 +26,19 @@ fn gen_json() -> @qc.Gen[Json] {
     ),
     (
       2,
-      @qc.one_of_array([Json::boolean(true), Json::boolean(false)]).fmap(fn(x) {
+      @gen.one_of_array([Json::boolean(true), Json::boolean(false)]).fmap(fn(x) {
         x
       }),
     ),
-    (1, @qc.pure(Json::null())),
+    (1, @gen.pure(Json::null())),
   ])
 }
 
 ///|
 /// Generate a random field key from a broad alphabet-based pool.
 /// Uses a prefix letter + random suffix to keep collision low while still readable.
-fn gen_key() -> @qc.Gen[String] {
-  @qc.tuple(@qc.alphabet(), @qc.int_range(0, 99)).fmap(fn(p) {
+fn gen_key() -> @gen.Gen[String] {
+  @gen.tuple(@gen.char_range('a', 'z'), @gen.int_range(0, 99)).fmap(fn(p) {
     let (ch, n) = p
     "\{ch}\{n}"
   })
@@ -46,10 +46,10 @@ fn gen_key() -> @qc.Gen[String] {
 
 ///|
 /// Generate a random Item with unique keys and 0-5 fields.
-fn gen_item() -> @qc.Gen[@n8n.Item] {
-  @qc.sized(fn(size) {
+fn gen_item() -> @gen.Gen[@n8n.Item] {
+  @gen.sized(fn(size) {
     let max_fields = if size > 5 { 5 } else if size < 0 { 0 } else { size }
-    @qc.int_range(0, max_fields).bind(fn(n) {
+    @gen.int_range(0, max_fields).bind(fn(n) {
       gen_unique_pair_array(n).fmap(fn(pairs) { @n8n.Item::from_pairs(pairs) })
     })
   })
@@ -57,13 +57,13 @@ fn gen_item() -> @qc.Gen[@n8n.Item] {
 
 ///|
 /// Generate an array of (key, json) pairs with unique keys.
-fn gen_unique_pair_array(n : Int) -> @qc.Gen[Array[(String, Json)]] {
+fn gen_unique_pair_array(n : Int) -> @gen.Gen[Array[(String, Json)]] {
   if n <= 0 {
-    return @qc.pure([])
+    return @gen.pure([])
   }
   // Generate more candidates than needed, then deduplicate by key.
   let candidate_count = n * 3
-  @qc.tuple(gen_key(), gen_json())
+  @gen.tuple(gen_key(), gen_json())
   .array_with_size(candidate_count)
   .fmap(fn(raw) {
     let seen : Map[String, Bool] = {}
@@ -83,20 +83,20 @@ fn gen_unique_pair_array(n : Int) -> @qc.Gen[Array[(String, Json)]] {
 
 ///|
 /// Generate an Item guaranteed to have the given key with a random value.
-fn gen_item_with_key(key : String) -> @qc.Gen[@n8n.Item] {
+fn gen_item_with_key(key : String) -> @gen.Gen[@n8n.Item] {
   gen_json().bind(fn(val) { gen_item().fmap(fn(base) { base.set(key, val) }) })
 }
 
 ///|
 /// Generate a non-empty array of Items (1-10).
-fn gen_items() -> @qc.Gen[Array[@n8n.Item]] {
-  @qc.int_range(1, 10).bind(fn(n) { gen_item().array_with_size(n) })
+fn gen_items() -> @gen.Gen[Array[@n8n.Item]] {
+  @gen.int_range(1, 10).bind(fn(n) { gen_item().array_with_size(n) })
 }
 
 ///|
 /// Generate a pair of Item arrays for Merge testing.
-fn gen_item_pair() -> @qc.Gen[(Array[@n8n.Item], Array[@n8n.Item])] {
-  @qc.tuple(gen_items(), gen_items())
+fn gen_item_pair() -> @gen.Gen[(Array[@n8n.Item], Array[@n8n.Item])] {
+  @gen.tuple(gen_items(), gen_items())
 }
 
 ///|
@@ -128,7 +128,7 @@ fn items_multiset_eq(a : Array[@n8n.Item], b : Array[@n8n.Item]) -> Bool {
 /// Item::set then Item::get round-trip: setting a key and getting it returns the value.
 test "pbt/item: set-get round trip" {
   let prop = @qc.forall(
-    @qc.tuple(gen_item(), @qc.tuple(gen_key(), gen_json())),
+    @gen.tuple(gen_item(), @gen.tuple(gen_key(), gen_json())),
     fn(p) {
       let (item, (key, val)) = p
       item.set(key, val).get(key) == Some(val)
@@ -158,7 +158,7 @@ test "pbt/item: merge with empty (left identity)" {
 ///|
 /// Item::of creates an item with exactly one field.
 test "pbt/item: of creates single-field item" {
-  let prop = @qc.forall(@qc.tuple(gen_key(), gen_json()), fn(p) {
+  let prop = @qc.forall(@gen.tuple(gen_key(), gen_json()), fn(p) {
     let (k, v) = p
     let item = @n8n.Item::of(k, v)
     item.get(k) == Some(v)
@@ -198,9 +198,9 @@ test "pbt/noop: idempotent" {
 ///|
 /// If node partitions items: true_count + false_count == input count.
 test "pbt/if: partition preserves count" {
-  let gen = @qc.tuple(
+  let gen = @gen.tuple(
     gen_items(),
-    @qc.tuple(gen_key(), @qc.one_of_array(["Equal", "NotEqual", "Exists"])),
+    @gen.tuple(gen_key(), @gen.one_of_array(["Equal", "NotEqual", "Exists"])),
   )
   let prop = @qc.forall(gen, fn(p) {
     let (items, (field, op_name)) = p
@@ -260,7 +260,7 @@ test "pbt/if: correct branch placement for Exists" {
 ///|
 /// Set node preserves item count.
 test "pbt/set: preserves item count" {
-  let gen = @qc.tuple(gen_items(), @qc.tuple(gen_key(), gen_json()))
+  let gen = @gen.tuple(gen_items(), @gen.tuple(gen_key(), gen_json()))
   let prop = @qc.forall(gen, fn(p) {
     let (items, (key, val)) = p
     let assignments = [@n8n.FieldAssignment::{ key, value: val }]
@@ -274,7 +274,7 @@ test "pbt/set: preserves item count" {
 ///|
 /// Set node: every output item has the assigned field.
 test "pbt/set: all outputs contain assigned field" {
-  let gen = @qc.tuple(gen_items(), @qc.tuple(gen_key(), gen_json()))
+  let gen = @gen.tuple(gen_items(), @gen.tuple(gen_key(), gen_json()))
   let prop = @qc.forall(gen, fn(p) {
     let (items, (key, val)) = p
     let assignments = [@n8n.FieldAssignment::{ key, value: val }]
@@ -389,7 +389,7 @@ test "pbt/switch: multiset partition integrity" {
 /// json_compare reflexivity: for any number x, x >= x, x <= x, x == x all hold,
 /// and x > x, x < x both do not hold.
 test "pbt/json_compare: reflexivity (all comparison ops)" {
-  let gen = @qc.int_range(-1000, 1000).fmap(fn(n) {
+  let gen = @gen.int_range(-1000, 1000).fmap(fn(n) {
     Json::number(n.to_double())
   })
   let prop = @qc.forall(gen, fn(x) {
@@ -415,7 +415,7 @@ test "pbt/json_compare: reflexivity (all comparison ops)" {
 /// json_compare antisymmetry: if a > b then !(b > a).
 /// Tests the actual implication, not just mutual exclusion of > and <.
 test "pbt/json_compare: antisymmetry (a > b implies !(b > a))" {
-  let gen = @qc.tuple(@qc.int_range(-500, 500), @qc.int_range(-500, 500))
+  let gen = @gen.tuple(@gen.int_range(-500, 500), @gen.int_range(-500, 500))
   let prop = @qc.forall(gen, fn(p) {
     let (a, b) = p
     let ja = Json::number(a.to_double())
@@ -447,7 +447,7 @@ test "pbt/json_compare: antisymmetry (a > b implies !(b > a))" {
 ///|
 /// json_compare trichotomy: for numbers, exactly one of a < b, a == b, a > b holds.
 test "pbt/json_compare: trichotomy for numbers" {
-  let gen = @qc.tuple(@qc.int_range(-500, 500), @qc.int_range(-500, 500))
+  let gen = @gen.tuple(@gen.int_range(-500, 500), @gen.int_range(-500, 500))
   let prop = @qc.forall(gen, fn(p) {
     let (a, b) = p
     let ja = Json::number(a.to_double())
@@ -474,7 +474,7 @@ test "pbt/json_compare: trichotomy for numbers" {
 ///|
 /// Non-numeric comparison: GreaterEqual on strings returns false (incomparable).
 test "pbt/json_compare: non-numeric comparison is false" {
-  let gen = @qc.tuple(gen_key(), gen_key())
+  let gen = @gen.tuple(gen_key(), gen_key())
   let prop = @qc.forall(gen, fn(p) {
     let (a, b) = p
     let ja = Json::string(a)
@@ -500,7 +500,7 @@ test "pbt/json_compare: non-numeric comparison is false" {
 ///|
 /// Start → NoOp chain: output is always one empty item, regardless of chain length.
 test "pbt/workflow: start-noop chain preserves single empty item" {
-  let gen = @qc.int_range(1, 5)
+  let gen = @gen.int_range(1, 5)
   let prop = @qc.forall(gen, fn(n) {
     let mut wf = @n8n.Workflow::new("chain").add_node(
       @n8n.NodeDef::new(@n8n.NodeId("s"), "Start", @n8n.Start),
@@ -525,7 +525,7 @@ test "pbt/workflow: start-noop chain preserves single empty item" {
 ///                                    NoOp
 /// Tests fan-out, merge, and multiple start nodes.
 test "pbt/workflow: diamond DAG with merge" {
-  let gen = @qc.tuple(gen_key(), gen_key())
+  let gen = @gen.tuple(gen_key(), gen_key())
   let prop = @qc.forall(gen, fn(p) {
     let (k1, k2) = p
     let wf = @n8n.Workflow::new("diamond")
@@ -589,7 +589,7 @@ test "pbt/workflow: diamond DAG with merge" {
 /// Varies the condition field and Set assignments so the If routing changes per sample.
 /// The Set guarantees the field exists, so the item always goes to the true branch.
 test "pbt/workflow: fan-out via If branching" {
-  let gen = @qc.tuple(gen_key(), gen_json())
+  let gen = @gen.tuple(gen_key(), gen_json())
   let prop = @qc.forall(gen, fn(p) {
     let (field, val) = p
     let wf = @n8n.Workflow::new("fanout")
@@ -630,9 +630,9 @@ test "pbt/workflow: fan-out via If branching" {
 /// If → Merge round-trip: split items by condition, then Merge(Append) should
 /// recover the original multiset (regardless of which items go true vs false).
 test "pbt/workflow: if-split then merge-append recovers all items" {
-  let gen = @qc.int_range(1, 8).bind(fn(n) {
+  let gen = @gen.int_range(1, 8).bind(fn(n) {
     // Generate n items, some with field "x" and some without
-    let item_gen = @qc.one_of([gen_item_with_key("x"), gen_item()])
+    let item_gen = @gen.one_of([gen_item_with_key("x"), gen_item()])
     item_gen.array_with_size(n)
   })
   let prop = @qc.forall(gen, fn(items) {
@@ -687,7 +687,7 @@ test "pbt/workflow: if-split then merge-append recovers all items" {
 ///|
 /// Multiple start nodes: all start nodes contribute items to a downstream merge.
 test "pbt/workflow: multiple start nodes merge" {
-  let gen = @qc.int_range(2, 5)
+  let gen = @gen.int_range(2, 5)
   let prop = @qc.forall(gen, fn(n) {
     let mut wf = @n8n.Workflow::new("multi-start").add_node(
       @n8n.NodeDef::new(@n8n.NodeId("merge"), "Merge", @n8n.Merge(@n8n.Append)),
@@ -741,9 +741,9 @@ test "pbt/workflow: multiple start nodes merge" {
 /// Input index ordering: items from input 0 come before items from input 1
 /// for non-Merge nodes that flatten grouped inputs.
 test "pbt/workflow: input index ordering for non-Merge nodes" {
-  let gen = @qc.tuple(
-    @qc.int_range(1, 5).fmap(fn(n) { Json::number(n.to_double()) }),
-    @qc.int_range(6, 10).fmap(fn(n) { Json::number(n.to_double()) }),
+  let gen = @gen.tuple(
+    @gen.int_range(1, 5).fmap(fn(n) { Json::number(n.to_double()) }),
+    @gen.int_range(6, 10).fmap(fn(n) { Json::number(n.to_double()) }),
   )
   let prop = @qc.forall(gen, fn(p) {
     let (v1, v2) = p
@@ -800,9 +800,9 @@ test "pbt/workflow: input index ordering for non-Merge nodes" {
 /// Switch fan-out into merge: items routed to different switch ports
 /// can be merged back to recover the original multiset.
 test "pbt/workflow: switch fan-out then merge recovers items" {
-  let gen = @qc.int_range(1, 6).bind(fn(n) {
+  let gen = @gen.int_range(1, 6).bind(fn(n) {
     // Generate items: some with "x", some with "y", some with neither
-    let item_gen = @qc.one_of([
+    let item_gen = @gen.one_of([
       gen_item_with_key("x"),
       gen_item_with_key("y"),
       gen_item(),
@@ -872,7 +872,7 @@ test "pbt/workflow: switch fan-out then merge recovers items" {
 ///|
 /// topo_sort returns all nodes: length == node count.
 test "pbt/workflow: topo_sort returns all nodes" {
-  let gen = @qc.int_range(1, 6)
+  let gen = @gen.int_range(1, 6)
   let prop = @qc.forall(gen, fn(n) {
     let mut wf = @n8n.Workflow::new("topo").add_node(
       @n8n.NodeDef::new(@n8n.NodeId("s"), "Start", @n8n.Start),
