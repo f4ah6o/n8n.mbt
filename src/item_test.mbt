@@ -10,7 +10,7 @@ test "Item::of creates single-field item" {
   inspect(
     item.get("name"),
     content=(
-      #|Some(String("alice"))
+      #|Some(String(alice))
     ),
   )
 }

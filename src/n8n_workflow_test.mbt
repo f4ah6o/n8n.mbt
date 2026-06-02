@@ -27,19 +27,19 @@ test "n8n/exec: linear chain Start → Set1 → Set2 execution order" {
   inspect(
     result.node_results[0].node_id,
     content=(
-      #|NodeId("start")
+      #|NodeId(start)
     ),
   )
   inspect(
     result.node_results[1].node_id,
     content=(
-      #|NodeId("set1")
+      #|NodeId(set1)
     ),
   )
   inspect(
     result.node_results[2].node_id,
     content=(
-      #|NodeId("set2")
+      #|NodeId(set2)
     ),
   )
   guard result.final_outputs.get(@n8n.NodeId("set2")) is Some(items) else {
@@ -96,7 +96,7 @@ test "n8n/exec: branching Start → Set → If → true/false paths" {
   inspect(
     true_items[0].get("branch"),
     content=(
-      #|Some(String("true"))
+      #|Some(String(true))
     ),
   )
   guard result.final_outputs.get(@n8n.NodeId("false_set")) is Some(false_items) else {
@@ -167,7 +167,7 @@ test "n8n/exec: diamond Start → If → {High, Low} → Merge" {
   inspect(
     items[0].get("label"),
     content=(
-      #|Some(String("high"))
+      #|Some(String(high))
     ),
   )
 }
@@ -393,7 +393,7 @@ test "n8n/complex: ETL pipeline" {
   inspect(
     items[0].get("category"),
     content=(
-      #|Some(String("adult"))
+      #|Some(String(adult))
     ),
   )
 }
@@ -462,7 +462,7 @@ test "n8n/complex: branch → merge → branch again" {
   inspect(
     high_items[0].get("from"),
     content=(
-      #|Some(String("B"))
+      #|Some(String(B))
     ),
   )
   guard result.final_outputs.get(@n8n.NodeId("low")) is Some(low_items) else {
@@ -472,7 +472,7 @@ test "n8n/complex: branch → merge → branch again" {
   inspect(
     low_items[0].get("from"),
     content=(
-      #|Some(String("A"))
+      #|Some(String(A))
     ),
   )
 }
@@ -514,7 +514,7 @@ test "n8n/complex: Set accumulates fields through chain" {
   inspect(
     items[0].get("first"),
     content=(
-      #|Some(String("hello"))
+      #|Some(String(hello))
     ),
   )
   inspect(items[0].get("second"), content="Some(Number(42))")
@@ -638,7 +638,7 @@ test "n8n/complex: MergeByPosition zips two branches" {
   inspect(
     items[0].get("name"),
     content=(
-      #|Some(String("Alice"))
+      #|Some(String(Alice))
     ),
   )
   inspect(items[0].get("score"), content="Some(Number(90))")
@@ -646,7 +646,7 @@ test "n8n/complex: MergeByPosition zips two branches" {
   inspect(
     items[1].get("name"),
     content=(
-      #|Some(String("Bob"))
+      #|Some(String(Bob))
     ),
   )
   inspect(items[1].get("score"), content="Some(Number(75))")
