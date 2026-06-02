@@ -4,7 +4,7 @@
 /// This mirrors n8n's INodeExecutionData.json field.
 pub(all) struct Item {
   json : Map[String, Json]
-} derive(Show, ToJson, Eq)
+} derive(Show, Debug, ToJson, Eq)
 
 ///|
 /// Create an empty item.
