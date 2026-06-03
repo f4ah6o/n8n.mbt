@@ -52,7 +52,7 @@ test "n8n/merge: mergeByPosition with unequal lengths" {
   inspect(
     items[0].get("data"),
     content=(
-      #|Some(String("c"))
+      #|Some(String(c))
     ),
   )
   // Position 1: merged
@@ -62,7 +62,7 @@ test "n8n/merge: mergeByPosition with unequal lengths" {
   inspect(
     items[2].get("data"),
     content=(
-      #|Some(String("e"))
+      #|Some(String(e))
     ),
   )
 }
@@ -91,7 +91,7 @@ test "n8n/merge: mergeByPosition overlapping keys" {
   inspect(
     items[0].get("value"),
     content=(
-      #|Some(String("new"))
+      #|Some(String(new))
     ),
   )
   // input1's extra field is included
@@ -199,14 +199,14 @@ test "n8n/merge: mergeByPosition with disjoint fields" {
   inspect(
     items[0].get("name"),
     content=(
-      #|Some(String("Alice"))
+      #|Some(String(Alice))
     ),
   )
   inspect(items[0].get("score"), content="Some(Number(90))")
   inspect(
     items[1].get("name"),
     content=(
-      #|Some(String("Bob"))
+      #|Some(String(Bob))
     ),
   )
   inspect(items[1].get("score"), content="Some(Number(75))")

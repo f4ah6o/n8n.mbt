@@ -86,13 +86,13 @@ test "regression/input_order: non-Merge node flattens in input-index order" {
   inspect(
     items[0].get("src"),
     content=(
-      #|Some(String("input0"))
+      #|Some(String(input0))
     ),
   )
   inspect(
     items[1].get("src"),
     content=(
-      #|Some(String("input1"))
+      #|Some(String(input1))
     ),
   )
 }

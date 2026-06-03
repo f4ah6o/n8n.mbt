@@ -94,7 +94,12 @@ test "RenameFields: renames specified fields" {
   )
   let out = result.get(@n8n.default_port).unwrap_or([])
   inspect(out[0].get("old_name"), content="None")
-  inspect(out[0].get("new_name"), content="Some(String(\"hello\"))")
+  inspect(
+    out[0].get("new_name"),
+    content=(
+      #|Some(String(hello))
+    ),
+  )
   inspect(out[0].get("keep"), content="Some(Number(42))")
 }
 

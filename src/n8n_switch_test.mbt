@@ -223,7 +223,7 @@ test "n8n/switch: workflow with 3-way priority routing" {
   inspect(
     high_items[0].get("handled"),
     content=(
-      #|Some(String("urgent"))
+      #|Some(String(urgent))
     ),
   )
   guard result.final_outputs.get(@n8n.NodeId("medium")) is Some(med_items) else {
@@ -233,7 +233,7 @@ test "n8n/switch: workflow with 3-way priority routing" {
   inspect(
     med_items[0].get("handled"),
     content=(
-      #|Some(String("normal"))
+      #|Some(String(normal))
     ),
   )
   guard result.final_outputs.get(@n8n.NodeId("low")) is Some(low_items) else {

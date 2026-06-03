@@ -34,7 +34,7 @@ test "Workflow::start_nodes finds nodes with no incoming edges" {
   inspect(
     starts[0],
     content=(
-      #|NodeId("a")
+      #|NodeId(a)
     ),
   )
 }

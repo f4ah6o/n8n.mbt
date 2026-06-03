@@ -290,7 +290,12 @@ test "RenameFields in workflow" {
   let items = result.final_outputs.get(@n8n.NodeId("ren")).unwrap_or([])
   inspect(items.length(), content="1")
   inspect(items[0].get("old"), content="None")
-  inspect(items[0].get("new"), content="Some(String(\"hello\"))")
+  inspect(
+    items[0].get("new"),
+    content=(
+      #|Some(String(hello))
+    ),
+  )
 }
 
 ///|

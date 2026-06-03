@@ -24,7 +24,7 @@ test "linear workflow: Start → Set" {
   inspect(
     items[0].get("name"),
     content=(
-      #|Some(String("alice"))
+      #|Some(String(alice))
     ),
   )
 }
@@ -78,7 +78,7 @@ test "branching workflow: Start → If → true/false paths" {
   inspect(
     pass_items[0].get("result"),
     content=(
-      #|Some(String("pass"))
+      #|Some(String(pass))
     ),
   )
   inspect(pass_items[0].get("score"), content="Some(Number(85))")
@@ -271,7 +271,7 @@ test "Switch node routes to correct output" {
   inspect(
     active_items[0].get("status"),
     content=(
-      #|Some(String("active"))
+      #|Some(String(active))
     ),
   )
   inspect(active_items[0].get("handled"), content="Some(True)")
@@ -285,13 +285,13 @@ test "execute returns node_results in order" {
   inspect(
     result.node_results[0].node_id,
     content=(
-      #|NodeId("start")
+      #|NodeId(start)
     ),
   )
   inspect(
     result.node_results[1].node_id,
     content=(
-      #|NodeId("set1")
+      #|NodeId(set1)
     ),
   )
 }
@@ -369,7 +369,7 @@ test "Merge KeepInput0 keeps only input 0 items" {
   inspect(
     items[0].get("src"),
     content=(
-      #|Some(String("input0"))
+      #|Some(String(input0))
     ),
   )
 }
@@ -385,7 +385,7 @@ test "Merge KeepInput1 keeps only input 1 items" {
   inspect(
     items[0].get("src"),
     content=(
-      #|Some(String("input1"))
+      #|Some(String(input1))
     ),
   )
 }
@@ -404,7 +404,7 @@ test "Merge MergeByPosition zips items by index" {
   inspect(
     items[0].get("src"),
     content=(
-      #|Some(String("input1"))
+      #|Some(String(input1))
     ),
   )
 }
