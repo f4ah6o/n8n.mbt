@@ -1,0 +1,3 @@
+# Pure workflow graph pilot; excludes execution, built-ins and external services.
+include = ["src/workflow.mbt"]
+operators = ["comparison", "boolean", "arithmetic", "condition"]

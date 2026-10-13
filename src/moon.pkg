@@ -1,8 +1,9 @@
 import {
-  "f4ah6o/dslx" @dslx,
+  "f4ah6o/dslx",
 } for "wbtest"
 
 import {
-  "moonbitlang/quickcheck/gen" @gen,
+  "moonbitlang/quickcheck/gen",
   "moonbitlang/quickcheck" @qc,
+  "moonbitlang/core/quickcheck" @coreqc,
 } for "test"
