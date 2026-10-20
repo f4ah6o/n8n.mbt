@@ -30,7 +30,7 @@ pub fn execute(workflow : Workflow) -> ExecutionResult raise {
   let order = workflow.topo_sort()
 
   // Accumulate items arriving at each node, grouped by input index.
-  let node_inputs : Map[NodeId, Map[Int32, Array[Item]]] = {}
+  let node_inputs : Map[NodeId, Map[Int, Array[Item]]] = {}
   let node_results : Array[NodeResult] = []
   let errors : Array[NodeError] = []
 
@@ -136,7 +136,7 @@ pub fn execute(workflow : Workflow) -> ExecutionResult raise {
 /// Try to execute a node, catching aborts/failures for error handling.
 fn try_execute_node(
   node_def : NodeDef,
-  grouped : Map[Int32, Array[Item]],
+  grouped : Map[Int, Array[Item]],
   node_id : NodeId,
 ) -> (Map[PortIndex, Array[Item]], NodeError?) raise {
   // If on_error is StopWorkflow, just execute directly (errors propagate).
@@ -163,7 +163,7 @@ fn try_execute_node(
 /// Execute a node given its kind and grouped inputs.
 fn execute_node_grouped(
   kind : NodeKind,
-  grouped : Map[Int32, Array[Item]],
+  grouped : Map[Int, Array[Item]],
   node_id : NodeId,
 ) -> Map[PortIndex, Array[Item]] raise {
   match kind {
@@ -180,7 +180,7 @@ fn execute_node_grouped(
       execute_merge(mode, input0, input1)
     }
     _ => {
-      let keys : Array[Int32] = []
+      let keys : Array[Int] = []
       for k, _ in grouped {
         keys.push(k)
       }
@@ -203,7 +203,7 @@ fn route_outputs(
   workflow : Workflow,
   node_id : NodeId,
   outputs : Map[PortIndex, Array[Item]],
-  node_inputs : Map[NodeId, Map[Int32, Array[Item]]],
+  node_inputs : Map[NodeId, Map[Int, Array[Item]]],
 ) -> Unit {
   for port, items in outputs {
     let conns = workflow.outgoing(node_id, port)
