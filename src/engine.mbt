@@ -49,7 +49,7 @@ pub fn execute(workflow : Workflow) -> ExecutionResult raise {
       let pass_through : Array[Item] = grouped.get(0).unwrap_or([])
       let outputs : Map[PortIndex, Array[Item]] = {}
       outputs[default_port] = pass_through
-      node_results.push({ node_id, outputs, status: Skipped, error: None })
+      node_results.push({ node_id, outputs, status: Skipped, error: None, })
       all_outputs[node_id] = outputs
       route_outputs(workflow, node_id, outputs, node_inputs)
       continue
@@ -103,7 +103,7 @@ pub fn execute(workflow : Workflow) -> ExecutionResult raise {
           }
         }
       None => {
-        node_results.push({ node_id, outputs, status: Success, error: None })
+        node_results.push({ node_id, outputs, status: Success, error: None, })
         all_outputs[node_id] = outputs
         route_outputs(workflow, node_id, outputs, node_inputs)
       }
@@ -129,7 +129,7 @@ pub fn execute(workflow : Workflow) -> ExecutionResult raise {
   }
 
   let status = if errors.length() > 0 { Error } else { Success }
-  { node_results, final_outputs, status, errors }
+  { node_results, final_outputs, status, errors, }
 }
 
 ///|
@@ -145,16 +145,16 @@ fn try_execute_node(
     return (outputs, None)
   }
   // For continue modes, try execution and catch errors.
-  let result : Result[Map[PortIndex, Array[Item]], _] = try? execute_node_grouped(
-    node_def.kind,
-    grouped,
-    node_id,
-  )
+  let result : Result[Map[PortIndex, Array[Item]], _] = Ok(
+    execute_node_grouped(node_def.kind, grouped, node_id),
+  ) catch {
+    error => Err(error)
+  }
   match result {
     Ok(outputs) => (outputs, None)
     Err(e) => {
       let empty : Map[PortIndex, Array[Item]] = {}
-      (empty, Some({ message: e.to_string(), node_id }))
+      (empty, Some({ message: e.to_string(), node_id, }))
     }
   }
 }
