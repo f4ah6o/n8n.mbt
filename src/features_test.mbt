@@ -9,7 +9,7 @@ test "disabled node: passes input through without executing" {
       @n8n.NodeDef::with_options(
         @n8n.NodeId("set"),
         "Set",
-        @n8n.Set([{ key: "added", value: Json::string("yes") }]),
+        @n8n.Set([{ key: "added", value: Json::string("yes"), }]),
         disabled=true,
       ),
     )
@@ -139,7 +139,7 @@ test "error handling: StopWorkflow propagates error" {
       ),
     )
     .connect_default(@n8n.NodeId("s"), @n8n.NodeId("bad"))
-  let r : Result[_, _] = try? @n8n.execute(wf)
+  let r : Result[_, _] = Ok(@n8n.execute(wf)) catch { error => Err(error) }
   inspect(r is Err(_), content="true")
 }
 
@@ -151,14 +151,14 @@ test "disabled node in the middle of a chain" {
       @n8n.NodeDef::new(
         @n8n.NodeId("set1"),
         "Set1",
-        @n8n.Set([{ key: "a", value: Json::number(1) }]),
+        @n8n.Set([{ key: "a", value: Json::number(1), }]),
       ),
     )
     .add_node(
       @n8n.NodeDef::with_options(
         @n8n.NodeId("set2"),
         "Set2",
-        @n8n.Set([{ key: "b", value: Json::number(2) }]),
+        @n8n.Set([{ key: "b", value: Json::number(2), }]),
         disabled=true,
       ),
     )
@@ -166,7 +166,7 @@ test "disabled node in the middle of a chain" {
       @n8n.NodeDef::new(
         @n8n.NodeId("set3"),
         "Set3",
-        @n8n.Set([{ key: "c", value: Json::number(3) }]),
+        @n8n.Set([{ key: "c", value: Json::number(3), }]),
       ),
     )
     .connect_default(@n8n.NodeId("s"), @n8n.NodeId("set1"))
@@ -189,14 +189,14 @@ test "Filter in workflow: Start → Filter → End" {
       @n8n.NodeDef::new(
         @n8n.NodeId("set"),
         "Set",
-        @n8n.Set([{ key: "x", value: Json::number(1) }]),
+        @n8n.Set([{ key: "x", value: Json::number(1), }]),
       ),
     )
     .add_node(
       @n8n.NodeDef::new(
         @n8n.NodeId("filter"),
         "Filter",
-        @n8n.Filter({ field: "missing", op: @n8n.Exists, value: Json::null() }),
+        @n8n.Filter({ field: "missing", op: @n8n.Exists, value: Json::null(), }),
       ),
     )
     .add_node(@n8n.NodeDef::new(@n8n.NodeId("end"), "End", @n8n.NoOp))
@@ -245,8 +245,8 @@ test "RemoveFields in workflow" {
         @n8n.NodeId("set"),
         "Set",
         @n8n.Set([
-          { key: "keep", value: Json::number(1) },
-          { key: "drop", value: Json::number(2) },
+          { key: "keep", value: Json::number(1), },
+          { key: "drop", value: Json::number(2), },
         ]),
       ),
     )
@@ -274,7 +274,7 @@ test "RenameFields in workflow" {
       @n8n.NodeDef::new(
         @n8n.NodeId("set"),
         "Set",
-        @n8n.Set([{ key: "old", value: Json::string("hello") }]),
+        @n8n.Set([{ key: "old", value: Json::string("hello"), }]),
       ),
     )
     .add_node(
